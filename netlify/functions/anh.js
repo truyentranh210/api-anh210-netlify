@@ -1,27 +1,25 @@
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
+const cheerio = require("cheerio");
 
-export async function handler(event) {
-  const urlParams = new URLSearchParams(event.queryStringParameters);
-  const searchKeyword = urlParams.get("s");
-  const postUrl = urlParams.get("url");
+// =============================
+// 🔹 Hàm chính (handler)
+// =============================
+exports.handler = async function (event) {
+  const params = new URLSearchParams(event.queryStringParameters);
+  const searchKeyword = params.get("s");
+  const postUrl = params.get("url");
   const path = event.path;
   const pageNumMatch = path.match(/page\/(\d+)/);
   const pageNum = pageNumMatch ? parseInt(pageNumMatch[1]) : 1;
 
-  // Nếu có url → lấy chi tiết bài viết
   if (postUrl) return await getPostDetails(postUrl);
-
-  // Nếu có từ khóa tìm kiếm → thực hiện tìm kiếm
   if (searchKeyword) return await performSearch(searchKeyword, pageNum);
 
-  // Nếu thiếu tham số
-  return jsonResponse({ error: "Vui lòng cung cấp tham số 's' hoặc 'url'." }, 400);
-}
+  return jsonResponse({ error: "Vui lòng cung cấp 's' hoặc 'url'." }, 400);
+};
 
-// ----------------------------
-// 🧠 HÀM TÌM KIẾM BÀI VIẾT
-// ----------------------------
+// =============================
+// 🔹 Hàm tìm kiếm
+// =============================
 async function performSearch(keyword, pageNum = 1) {
   try {
     const searchUrl =
@@ -43,7 +41,7 @@ async function performSearch(keyword, pageNum = 1) {
     let searchResults = $("div.bs, div.utao, div.post-item");
     if (searchResults.length === 0) return jsonResponse([]);
 
-    const resultsData = [];
+    const results = [];
     searchResults.each((_, el) => {
       const aTag = $(el).find("a").first();
       const imgTag = $(el).find("img").first();
@@ -52,7 +50,7 @@ async function performSearch(keyword, pageNum = 1) {
           aTag.attr("title") ||
           $(el).find("h5.post-title").text().trim() ||
           "Không có tiêu đề";
-        resultsData.push({
+        results.push({
           tieu_de: title,
           hinh_anh: imgTag.attr("src"),
           link_bai_viet: aTag.attr("href"),
@@ -60,15 +58,15 @@ async function performSearch(keyword, pageNum = 1) {
       }
     });
 
-    return jsonResponse(resultsData);
-  } catch (e) {
-    return jsonResponse({ error: `Lỗi kết nối: ${e.message}` }, 500);
+    return jsonResponse(results);
+  } catch (err) {
+    return jsonResponse({ error: `Lỗi kết nối: ${err.message}` }, 500);
   }
 }
 
-// ----------------------------
-// 🧠 HÀM LẤY CHI TIẾT BÀI VIẾT
-// ----------------------------
+// =============================
+// 🔹 Hàm lấy chi tiết bài viết
+// =============================
 async function getPostDetails(fullUrl) {
   try {
     const headers = {
@@ -103,17 +101,20 @@ async function getPostDetails(fullUrl) {
       tieu_de: title,
       danh_sach_anh: images,
     });
-  } catch (e) {
-    return jsonResponse({ error: `Lỗi khi lấy chi tiết bài viết: ${e.message}` }, 500);
+  } catch (err) {
+    return jsonResponse(
+      { error: `Lỗi khi lấy chi tiết bài viết: ${err.message}` },
+      500
+    );
   }
 }
 
-// ----------------------------
-// ⚙️ HÀM HỖ TRỢ TRẢ JSON
-// ----------------------------
-function jsonResponse(data, statusCode = 200) {
+// =============================
+// 🔹 Hàm trả JSON
+// =============================
+function jsonResponse(data, status = 200) {
   return {
-    statusCode,
+    statusCode: status,
     headers: { "Content-Type": "application/json; charset=utf-8" },
     body: JSON.stringify(data, null, 2),
   };
