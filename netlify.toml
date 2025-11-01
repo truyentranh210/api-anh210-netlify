@@ -2,7 +2,16 @@
   functions = "netlify/functions"
   publish = "."
 
+# 🖼️ Route /anh/* → function anh.js
 [[redirects]]
   from = "/anh/*"
   to = "/.netlify/functions/anh"
   status = 200
+  force = true
+
+# 🏠 Route /home → trỏ về function anh.js (hiển thị hướng dẫn API)
+[[redirects]]
+  from = "/home"
+  to = "/.netlify/functions/anh"
+  status = 200
+  force = true
