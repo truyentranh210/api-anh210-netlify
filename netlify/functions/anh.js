@@ -11,9 +11,47 @@ exports.handler = async function (event) {
   const pageNumMatch = path.match(/page\/(\d+)/);
   const pageNum = pageNumMatch ? parseInt(pageNumMatch[1]) : 1;
 
+  // 🏠 /home → hiển thị hướng dẫn API
+  if (path === "/home" || path === "/anh/home") {
+    return jsonResponse({
+      project: "🖼️ TopAnhAnime API (Netlify Functions)",
+      author: "truyentranh210",
+      version: "1.0.0",
+      updated: new Date().toISOString(),
+      description:
+        "API cho phép tìm kiếm và lấy toàn bộ ảnh từ các bài viết trên trang TopAnhAnime.",
+      usage: {
+        "/home": "Hiển thị hướng dẫn chi tiết (trang hiện tại)",
+        "/anh?s=<từ-khóa>": "Tìm kiếm bài viết hoặc bộ ảnh theo từ khóa",
+        "/anh?url=<link-bài-viết>":
+          "Lấy toàn bộ ảnh trong bài viết cụ thể từ đường dẫn",
+      },
+      parameters: {
+        "s": "Chuỗi từ khóa cần tìm (VD: one piece, naruto, anime girl)",
+        "url": "Link bài viết cần tải ảnh (VD: https://topanhanime.com/abc...)",
+      },
+      examples: {
+        search: "/anh?s=anime&page=1",
+        get_details:
+          "/anh?url=https://topanhanime.com/truyen-tranh-sexy-001",
+      },
+      response_format: {
+        "tieu_de": "Tiêu đề bài viết hoặc bộ ảnh",
+        "hinh_anh": "URL hình ảnh (trong danh sách)",
+        "link_bai_viet": "Link chi tiết bài viết",
+      },
+      message:
+        "✅ API đang hoạt động! Hãy thử gọi /anh?s=anime hoặc /anh?url=<link-bài-viết>.",
+    });
+  }
+
+  // 📘 Nếu có ?url= → lấy chi tiết bài viết
   if (postUrl) return await getPostDetails(postUrl);
+
+  // 🔍 Nếu có ?s= → tìm kiếm
   if (searchKeyword) return await performSearch(searchKeyword, pageNum);
 
+  // ❌ Không có tham số hợp lệ
   return jsonResponse({ error: "Vui lòng cung cấp 's' hoặc 'url'." }, 400);
 };
 
@@ -24,7 +62,9 @@ async function performSearch(keyword, pageNum = 1) {
   try {
     const searchUrl =
       pageNum > 1
-        ? `https://topanhanime.com/page/${pageNum}/?s=${encodeURIComponent(keyword)}`
+        ? `https://topanhanime.com/page/${pageNum}/?s=${encodeURIComponent(
+            keyword
+          )}`
         : `https://topanhanime.com/?s=${encodeURIComponent(keyword)}`;
 
     const headers = {
@@ -100,6 +140,7 @@ async function getPostDetails(fullUrl) {
     return jsonResponse({
       tieu_de: title,
       danh_sach_anh: images,
+      tong_so_anh: images.length,
     });
   } catch (err) {
     return jsonResponse(
